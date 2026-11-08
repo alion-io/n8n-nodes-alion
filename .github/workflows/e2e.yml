@@ -1,0 +1,55 @@
+name: n8n end-to-end
+
+# Installs the published node into a real n8n and runs test/e2e/workflow.json with the n8n CLI:
+# Manual Trigger -> Alion (Company: Search) -> Alion (Company: Get Similar), no key.
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Publish]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      N8N_USER_FOLDER: ${{ github.workspace }}/.n8n-home
+      N8N_DIAGNOSTICS_ENABLED: 'false'
+      N8N_RUNNERS_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Install n8n
+        run: npm install -g n8n@latest && n8n --version
+      - name: Install the published node as a community package
+        run: |
+          mkdir -p "$N8N_USER_FOLDER/.n8n/nodes"
+          cd "$N8N_USER_FOLDER/.n8n/nodes"
+          npm init -y >/dev/null
+          npm install @alion-io/n8n-nodes-alion@latest
+          npm ls @alion-io/n8n-nodes-alion
+      - name: Import and run the workflow
+        run: |
+          n8n import:workflow --input=test/e2e/workflow.json
+          n8n execute --id=alionE2e000001 --rawOutput > out.json || { cat out.json; exit 1; }
+          head -c 4000 out.json; echo
+      - name: Check the result
+        run: |
+          node -e '
+            const s = require("fs").readFileSync("out.json", "utf8");
+            const j = JSON.parse(s.slice(s.indexOf("{")));
+            const run = j.data.resultData.runData;
+            const search = run["Search companies"][0].data.main[0];
+            const similar = run["Similar companies"][0].data.main[0];
+            if (j.data.resultData.error) throw new Error(JSON.stringify(j.data.resultData.error));
+            if (search.length !== 3) throw new Error("search returned " + search.length + " items");
+            if (!search.some((i) => i.json.domain === "stripe.com")) throw new Error("stripe.com not found");
+            if (similar.length < 1) throw new Error("no lookalikes");
+            console.log("ok:", search.map((i) => i.json.domain).join(", "), "| similar:", similar.length);
+          '

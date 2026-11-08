@@ -1,0 +1,49 @@
+{
+  "id": "alionE2e000001",
+  "name": "Alion node end-to-end",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "6c0f3c8e-0000-4000-8000-000000000001",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "search",
+        "query": "stripe",
+        "limit": 3,
+        "filters": {},
+        "sort": {}
+      },
+      "id": "6c0f3c8e-0000-4000-8000-000000000002",
+      "name": "Search companies",
+      "type": "@alion-io/n8n-nodes-alion.alion",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "resource": "company",
+        "operation": "getSimilar",
+        "company": "={{ $json.domain }}",
+        "similarLimit": 2,
+        "filters": {}
+      },
+      "id": "6c0f3c8e-0000-4000-8000-000000000003",
+      "name": "Similar companies",
+      "type": "@alion-io/n8n-nodes-alion.alion",
+      "typeVersion": 1,
+      "position": [440, 0]
+    }
+  ],
+  "connections": {
+    "Start": { "main": [[{ "node": "Search companies", "type": "main", "index": 0 }]] },
+    "Search companies": { "main": [[{ "node": "Similar companies", "type": "main", "index": 0 }]] }
+  },
+  "settings": {},
+  "active": false
+}
