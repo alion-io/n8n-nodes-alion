@@ -15,7 +15,9 @@ function context(params, { continueOnFail = false, items = [{ json: {} }] } = {}
 		continueOnFail: () => continueOnFail,
 		helpers: {
 			httpRequest: async (o) => {
-				const res = await fetch(o.url, { method: o.method, headers: o.headers, body: JSON.stringify(o.body) });
+				// (named a test run, so Alion's admin does not count CI as new users of the node)
+				const headers = { ...o.headers, 'User-Agent': `${o.headers['User-Agent']} n8n-nodes-alion-tests` };
+				const res = await fetch(o.url, { method: o.method, headers, body: JSON.stringify(o.body) });
 				const body = await res.json();
 				if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { httpCode: String(res.status), description: JSON.stringify(body) });
 				return body;
