@@ -1,0 +1,865 @@
+{
+  "name": "Qualify inbound leads by their company domain with Alion",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Qualify inbound leads by company\n\n### How it works\nA visitor fills in the lead form. The workflow takes the domain of their work email (or of the website they typed) and asks Alion, a live graph of companies, which company it is. For a known company it then checks whether the company shows signs of life (open job postings, a site that answers, recent updates) and how many roles it is hiring for. Each lead is saved to an n8n Data Table with the company's name, industry, size, country and founding year, an Alion verdict and a status:\n- **qualified**: a known, active company larger than your minimum size;\n- **review**: a personal email address, a company Alion does not know, or one below your rules.\n\nIf Alion does not answer within two minutes, the lead is saved with **review** and a note to check it by hand, so no lead is lost. The visitor sees a thank-you page either way. Alion is called through its free open MCP address: no account or API key. The free allowance is 300 calls a day per network.\n\n### Setup\n1. In **Lead rules**, set the minimum company sizes you accept and the Data Table name (the table is created on the first submission).\n2. Activate the workflow and open the production URL of **Lead form**, or embed it on your site.\n3. Submit three test leads: a personal address, an address at a well-known company, and one at a made-up domain. Check the three rows in the Data Table.\n\n### Customization\nAdd a Slack or email node after **Save the lead** to alert sales about qualified leads, or send them to your CRM. Extend **Lead rules** with industries or countries you want to prioritise.",
+        "height": 820,
+        "width": 500,
+        "color": 1
+      },
+      "id": "c2000000-0000-4000-8000-000000000001",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -700,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Collect the lead\nThe form, your rules and the table that stores every lead.",
+        "height": 300,
+        "width": 680,
+        "color": 7
+      },
+      "id": "c2000000-0000-4000-8000-000000000002",
+      "name": "Section: collect",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Find the company\nPersonal addresses (Gmail, Outlook...) skip the lookup. Work domains are resolved to a company in Alion.",
+        "height": 300,
+        "width": 680,
+        "color": 7
+      },
+      "id": "c2000000-0000-4000-8000-000000000003",
+      "name": "Section: lookup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        560,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Score and save\nKnown companies get an activity check and a status from your rules. If Alion does not answer in time, the lead is still saved for review.",
+        "height": 780,
+        "width": 900,
+        "color": 7
+      },
+      "id": "c2000000-0000-4000-8000-000000000004",
+      "name": "Section: score",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1280,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Talk to us",
+        "formDescription": "Tell us a little about you and we will get back to you within one business day.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Work email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company website",
+              "placeholder": "e.g. acme.com"
+            },
+            {
+              "fieldLabel": "Message",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000010",
+      "name": "Lead form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -120,
+        40
+      ],
+      "webhookId": "5d3f6e9a-6c55-4c8e-9a51-6f0d2a7c1b01"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "min_size_excluded",
+              "value": "1-10",
+              "type": "string"
+            },
+            {
+              "id": "r2",
+              "name": "free_email_domains",
+              "value": "gmail.com,googlemail.com,yahoo.com,outlook.com,hotmail.com,live.com,icloud.com,me.com,aol.com,proton.me,protonmail.com,gmx.de,gmx.net,web.de,mail.ru,yandex.ru,qq.com,163.com",
+              "type": "string"
+            },
+            {
+              "id": "r3",
+              "name": "data_table",
+              "value": "Inbound leads (Alion)",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000011",
+      "name": "Lead rules",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        100,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "={{ $json.data_table }}",
+        "columns": {
+          "column": [
+            {
+              "name": "name",
+              "type": "string"
+            },
+            {
+              "name": "email",
+              "type": "string"
+            },
+            {
+              "name": "domain",
+              "type": "string"
+            },
+            {
+              "name": "message",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "reason",
+              "type": "string"
+            },
+            {
+              "name": "company",
+              "type": "string"
+            },
+            {
+              "name": "industry",
+              "type": "string"
+            },
+            {
+              "name": "size",
+              "type": "string"
+            },
+            {
+              "name": "country",
+              "type": "string"
+            },
+            {
+              "name": "founded_year",
+              "type": "number"
+            },
+            {
+              "name": "verdict",
+              "type": "string"
+            },
+            {
+              "name": "open_jobs",
+              "type": "number"
+            },
+            {
+              "name": "alion_url",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "id": "c2000000-0000-4000-8000-000000000012",
+      "name": "Create the table if missing",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        320,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1",
+              "name": "name",
+              "value": "={{ $('Lead form').item.json['Full name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "d2",
+              "name": "email",
+              "value": "={{ $('Lead form').item.json['Work email'].trim().toLowerCase() }}",
+              "type": "string"
+            },
+            {
+              "id": "d3",
+              "name": "message",
+              "value": "={{ $('Lead form').item.json['Message'] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "d4",
+              "name": "domain",
+              "value": "={{ (($('Lead form').item.json['Company website'] || '').trim() ? $('Lead form').item.json['Company website'] : $('Lead form').item.json['Work email'].split('@').pop()).trim().toLowerCase().replace(/^https?:\\/\\//, '').replace(/^www\\./, '').split('/')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "d5",
+              "name": "personal_email",
+              "value": "={{ $('Lead rules').item.json.free_email_domains.split(',').map(d => d.trim()).includes($('Lead form').item.json['Work email'].split('@').pop().trim().toLowerCase()) && !($('Lead form').item.json['Company website'] || '').trim() }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000013",
+      "name": "Extract the company domain",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        600,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "p1",
+              "leftValue": "={{ $json.personal_email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000014",
+      "name": "Personal email address?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        820,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://alion.io/mcp/open",
+        "tool": {
+          "__rl": true,
+          "mode": "id",
+          "value": "resolve_company"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ domain: $json.domain }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "c2000000-0000-4000-8000-000000000015",
+      "name": "Look up the company",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        1040,
+        140
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "k1",
+              "leftValue": "={{ $json.structuredContent.match?.domain }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000016",
+      "name": "Company known to Alion?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1320,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://alion.io/mcp/open",
+        "tool": {
+          "__rl": true,
+          "mode": "id",
+          "value": "check_counterparty"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({ target: $json.structuredContent.match.domain }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "c2000000-0000-4000-8000-000000000017",
+      "name": "Check activity and hiring",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [
+        1540,
+        40
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "name",
+              "value": "={{ $('Extract the company domain').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "email",
+              "value": "={{ $('Extract the company domain').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "domain",
+              "value": "={{ $('Extract the company domain').item.json.domain }}",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "message",
+              "value": "={{ $('Extract the company domain').item.json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "s5",
+              "name": "company",
+              "value": "={{ $('Look up the company').item.json.structuredContent.match.name }}",
+              "type": "string"
+            },
+            {
+              "id": "s6",
+              "name": "industry",
+              "value": "={{ $('Look up the company').item.json.structuredContent.match.industry || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "s7",
+              "name": "size",
+              "value": "={{ $('Look up the company').item.json.structuredContent.match.size_band || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "s8",
+              "name": "country",
+              "value": "={{ $('Look up the company').item.json.structuredContent.match.headquarters?.country?.iso || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "s9",
+              "name": "founded_year",
+              "value": "={{ $('Look up the company').item.json.structuredContent.match.founded_year || null }}",
+              "type": "number"
+            },
+            {
+              "id": "s10",
+              "name": "verdict",
+              "value": "={{ $json.structuredContent.verdict }}",
+              "type": "string"
+            },
+            {
+              "id": "s11",
+              "name": "open_jobs",
+              "value": "={{ $json.structuredContent.company?.hiring?.open_jobs ?? 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "s12",
+              "name": "alion_url",
+              "value": "={{ ($('Look up the company').item.json.structuredContent.match.url || '').split('?')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "s13",
+              "name": "status",
+              "value": "={{ $json.structuredContent.verdict === 'known_active' && !$('Lead rules').item.json.min_size_excluded.split(',').map(s => s.trim()).includes($('Look up the company').item.json.structuredContent.match.size_band || '') ? 'qualified' : 'review' }}",
+              "type": "string"
+            },
+            {
+              "id": "s14",
+              "name": "reason",
+              "value": "={{ $json.structuredContent.meaning }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000018",
+      "name": "Score the lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1760,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "u1",
+              "name": "name",
+              "value": "={{ $('Extract the company domain').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "u2",
+              "name": "email",
+              "value": "={{ $('Extract the company domain').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "u3",
+              "name": "domain",
+              "value": "={{ $('Extract the company domain').item.json.domain }}",
+              "type": "string"
+            },
+            {
+              "id": "u4",
+              "name": "message",
+              "value": "={{ $('Extract the company domain').item.json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "u5",
+              "name": "status",
+              "value": "review",
+              "type": "string"
+            },
+            {
+              "id": "u6",
+              "name": "reason",
+              "value": "Alion does not know a company at this domain.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000019",
+      "name": "Mark unknown company",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1540,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "domain",
+              "value": "={{ $json.domain }}",
+              "type": "string"
+            },
+            {
+              "id": "e4",
+              "name": "message",
+              "value": "={{ $json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "e5",
+              "name": "status",
+              "value": "review",
+              "type": "string"
+            },
+            {
+              "id": "e6",
+              "name": "reason",
+              "value": "Personal email address: ask for the company.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000020",
+      "name": "Mark personal email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1540,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Lead rules').item.json.data_table }}"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000021",
+      "name": "Save the lead",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1980,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "completion",
+        "completionTitle": "Thank you",
+        "completionMessage": "We have your message and will get back to you within one business day.",
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000022",
+      "name": "Show the thank-you page",
+      "type": "n8n-nodes-base.form",
+      "typeVersion": 1,
+      "position": [
+        2200,
+        240
+      ],
+      "webhookId": "5d3f6e9a-6c55-4c8e-9a51-6f0d2a7c1b02"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "name",
+              "value": "={{ $('Extract the company domain').item.json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "email",
+              "value": "={{ $('Extract the company domain').item.json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "domain",
+              "value": "={{ $('Extract the company domain').item.json.domain }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "message",
+              "value": "={{ $('Extract the company domain').item.json.message }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "status",
+              "value": "review",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "reason",
+              "value": "Alion did not answer in time: check this company by hand.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c2000000-0000-4000-8000-000000000023",
+      "name": "Mark lookup failed",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1540,
+        560
+      ]
+    }
+  ],
+  "connections": {
+    "Lead form": {
+      "main": [
+        [
+          {
+            "node": "Lead rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead rules": {
+      "main": [
+        [
+          {
+            "node": "Create the table if missing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create the table if missing": {
+      "main": [
+        [
+          {
+            "node": "Extract the company domain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract the company domain": {
+      "main": [
+        [
+          {
+            "node": "Personal email address?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Personal email address?": {
+      "main": [
+        [
+          {
+            "node": "Mark personal email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Look up the company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Look up the company": {
+      "main": [
+        [
+          {
+            "node": "Company known to Alion?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark lookup failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Company known to Alion?": {
+      "main": [
+        [
+          {
+            "node": "Check activity and hiring",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark unknown company",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check activity and hiring": {
+      "main": [
+        [
+          {
+            "node": "Score the lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark lookup failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score the lead": {
+      "main": [
+        [
+          {
+            "node": "Save the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark unknown company": {
+      "main": [
+        [
+          {
+            "node": "Save the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark personal email": {
+      "main": [
+        [
+          {
+            "node": "Save the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save the lead": {
+      "main": [
+        [
+          {
+            "node": "Show the thank-you page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark lookup failed": {
+      "main": [
+        [
+          {
+            "node": "Save the lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

@@ -1,0 +1,243 @@
+{
+  "name": "Build a weekly list of newly funded startups in your market with Alion",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Weekly list of newly funded startups\n\n### How it works\nEvery Monday this workflow asks Alion (a live graph of companies, their funding rounds and hiring) for startups in your market that announced a funding round recently. It keeps only the startups it has not saved before and adds them to an n8n Data Table, so the table grows into a deduplicated prospect or deal-flow list: name, domain, industry, size, country, founding year, last round and its date, and how many roles each startup is hiring for. Useful for sales teams prospecting freshly funded companies, recruiters, and investors tracking a sector.\n\nAlion is called through its free open MCP address, so no account or API key is needed. The free allowance is 300 calls a day per network and up to 20 companies per search.\n\n### Setup\n1. Open **Configure your market** and set the country, industry, funding stages and time window.\n2. Leave the Data Table name as is or change it: the workflow creates the table on the first run.\n3. Run the workflow once with **Execute workflow** and open the Data Table to check the rows.\n4. Activate the workflow to run it every Monday.\n\n### Customization\nAdd a Slack, Gmail or Google Sheets node after **Save new startups** to get the new names as a digest. Change the schedule, or widen the search in **Configure your market** (several funding stages or industries separated by commas).",
+        "height": 760,
+        "width": 480,
+        "color": 1
+      },
+      "id": "b1000000-0000-4000-8000-000000000001",
+      "name": "Overview",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-640, -260]
+    },
+    {
+      "parameters": {
+        "content": "## Settings\nWhen to run and which startups to look for.",
+        "height": 300,
+        "width": 460,
+        "color": 7
+      },
+      "id": "b1000000-0000-4000-8000-000000000002",
+      "name": "Section: settings",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-120, -100]
+    },
+    {
+      "parameters": {
+        "content": "## Find recently funded startups\nCreates the Data Table on the first run, then searches Alion's open MCP address (no key) and returns one item per startup.",
+        "height": 300,
+        "width": 680,
+        "color": 7
+      },
+      "id": "b1000000-0000-4000-8000-000000000003",
+      "name": "Section: search",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [380, -100]
+    },
+    {
+      "parameters": {
+        "content": "## Save only new startups\nSkips domains already in the table, so each startup is saved once even when it stays in the results for weeks.",
+        "height": 300,
+        "width": 460,
+        "color": 7
+      },
+      "id": "b1000000-0000-4000-8000-000000000004",
+      "name": "Section: save",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [1100, -100]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [1],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000010",
+      "name": "Every Monday at 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-80, 40]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "c1", "name": "country", "value": "DE", "type": "string" },
+            { "id": "c2", "name": "industry", "value": "Fintech", "type": "string" },
+            { "id": "c3", "name": "funding_stage", "value": "pre_seed,seed,series_a", "type": "string" },
+            { "id": "c4", "name": "raised_since", "value": "90d", "type": "string" },
+            { "id": "c5", "name": "max_results", "value": 20, "type": "number" },
+            { "id": "c6", "name": "data_table", "value": "Funded startups (Alion)", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000011",
+      "name": "Configure your market",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [140, 40]
+    },
+    {
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "={{ $json.data_table }}",
+        "columns": {
+          "column": [
+            { "name": "domain", "type": "string" },
+            { "name": "name", "type": "string" },
+            { "name": "industry", "type": "string" },
+            { "name": "country", "type": "string" },
+            { "name": "size", "type": "string" },
+            { "name": "founded_year", "type": "number" },
+            { "name": "last_round", "type": "string" },
+            { "name": "last_round_date", "type": "string" },
+            { "name": "open_jobs", "type": "number" },
+            { "name": "alion_id", "type": "number" }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000012",
+      "name": "Create the table if missing",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [420, 40]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://alion.io/mcp/open",
+        "tool": {
+          "__rl": true,
+          "mode": "id",
+          "value": "search_companies"
+        },
+        "inputMode": "json",
+        "jsonInput": "={{ JSON.stringify({\n  country: $('Configure your market').item.json.country,\n  industry: $('Configure your market').item.json.industry,\n  startup: true,\n  funding_stage: $('Configure your market').item.json.funding_stage,\n  raised_since: $('Configure your market').item.json.raised_since,\n  sort: 'recent_funding',\n  detail: 'compact',\n  limit: $('Configure your market').item.json.max_results\n}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000013",
+      "name": "Search recently funded startups",
+      "type": "@n8n/n8n-nodes-langchain.mcpClient",
+      "typeVersion": 1.1,
+      "position": [640, 40],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "structuredContent.items",
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000014",
+      "name": "One item per startup",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [860, 40]
+    },
+    {
+      "parameters": {
+        "resource": "row",
+        "operation": "rowNotExists",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Configure your market').item.json.data_table }}"
+        },
+        "matchType": "allConditions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "domain",
+              "keyValue": "={{ $json.domain }}"
+            }
+          ]
+        }
+      },
+      "id": "b1000000-0000-4000-8000-000000000015",
+      "name": "Keep startups not saved yet",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [1140, 40]
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Configure your market').item.json.data_table }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "domain": "={{ $json.domain }}",
+            "name": "={{ $json.name }}",
+            "industry": "={{ $json.industry }}",
+            "country": "={{ $json.hq_country }}",
+            "size": "={{ $json.size_band }}",
+            "founded_year": "={{ $json.founded_year }}",
+            "last_round": "={{ $json.last_round }}",
+            "last_round_date": "={{ $json.last_round_date }}",
+            "open_jobs": "={{ $json.open_jobs }}",
+            "alion_id": "={{ $json.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            { "id": "domain", "displayName": "domain", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "name", "displayName": "name", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "industry", "displayName": "industry", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "country", "displayName": "country", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "size", "displayName": "size", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "founded_year", "displayName": "founded_year", "required": false, "defaultMatch": false, "display": true, "type": "number", "readOnly": false, "removed": false },
+            { "id": "last_round", "displayName": "last_round", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "last_round_date", "displayName": "last_round_date", "required": false, "defaultMatch": false, "display": true, "type": "string", "readOnly": false, "removed": false },
+            { "id": "open_jobs", "displayName": "open_jobs", "required": false, "defaultMatch": false, "display": true, "type": "number", "readOnly": false, "removed": false },
+            { "id": "alion_id", "displayName": "alion_id", "required": false, "defaultMatch": false, "display": true, "type": "number", "readOnly": false, "removed": false }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b1000000-0000-4000-8000-000000000016",
+      "name": "Save new startups",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [1360, 40]
+    }
+  ],
+  "connections": {
+    "Every Monday at 08:00": { "main": [[{ "node": "Configure your market", "type": "main", "index": 0 }]] },
+    "Configure your market": { "main": [[{ "node": "Create the table if missing", "type": "main", "index": 0 }]] },
+    "Create the table if missing": { "main": [[{ "node": "Search recently funded startups", "type": "main", "index": 0 }]] },
+    "Search recently funded startups": { "main": [[{ "node": "One item per startup", "type": "main", "index": 0 }]] },
+    "One item per startup": { "main": [[{ "node": "Keep startups not saved yet", "type": "main", "index": 0 }]] },
+    "Keep startups not saved yet": { "main": [[{ "node": "Save new startups", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}
