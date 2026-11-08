@@ -24,6 +24,13 @@ function context(params, { continueOnFail = false, items = [{ json: {} }] } = {}
 	};
 }
 
+test('the User-Agent version follows package.json', async () => {
+	const { readFileSync } = await import('node:fs');
+	const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+	const src = readFileSync(new URL('../nodes/Alion/transport.ts', import.meta.url), 'utf8');
+	assert.ok(src.includes(`const VERSION = '${pkg.version}';`));
+});
+
 const run = (params, opts) => new Alion().execute.call(context({ authentication: 'none', ...params }, opts));
 
 test('company search: rows as items, limit honoured across pages', async () => {

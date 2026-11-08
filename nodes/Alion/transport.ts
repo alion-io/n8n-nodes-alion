@@ -8,7 +8,7 @@ import {
 } from 'n8n-workflow';
 
 export const BASE_URL = 'https://alion.io';
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 
 /**
  * Calls one Alion tool: a stateless JSON-RPC tools/call on the MCP endpoint. Without credentials the free open
