@@ -1,0 +1,18 @@
+{
+	"node": "@alion-io/n8n-nodes-alion.alion",
+	"nodeVersion": "1.0",
+	"codexVersion": "1.0",
+	"categories": ["Sales", "Marketing & Content", "Data & Storage"],
+	"resources": {
+		"credentialDocumentation": [
+			{
+				"url": "https://github.com/alion-io/n8n-nodes-alion#credentials"
+			}
+		],
+		"primaryDocumentation": [
+			{
+				"url": "https://github.com/alion-io/n8n-nodes-alion#readme"
+			}
+		]
+	}
+}
