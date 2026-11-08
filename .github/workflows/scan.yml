@@ -19,6 +19,8 @@ jobs:
     steps:
       - uses: actions/setup-node@v5
         with:
-          node-version: 'lts/*'
+          node-version: 22
       - name: Scan the latest published version
-        run: npx -y @n8n/scan-community-package@latest @alion-io/n8n-nodes-alion
+        run: |
+          set -o pipefail
+          npx -y @n8n/scan-community-package@latest @alion-io/n8n-nodes-alion 2>&1 | cat
